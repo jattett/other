@@ -50,7 +50,7 @@
     "timers-browserify": "^2.0.12",
     "ts-node": "^10.9.2"
   },
-    "homepage": "https://jattett.github.io/",
+    "homepage": "https://jattett.github.io/other",
         "scripts": {
       "start": "react-scripts start",
       "build": "react-scripts build",
