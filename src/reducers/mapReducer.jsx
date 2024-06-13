@@ -10,6 +10,7 @@ import {
   setCurrentMarker,
   setAiInput,
   setGymnasiums,
+  setLoading,
 } from '../actions/actions';
 
 const initialState = {
@@ -22,7 +23,8 @@ const initialState = {
   currentPosition: null,
   currentMarker: null,
   aiInput: '',
-  gymnasiums: [],
+  gyms: [],
+  loading: false,
 };
 
 const mapReducer = createReducer(initialState, (builder) => {
@@ -55,7 +57,10 @@ const mapReducer = createReducer(initialState, (builder) => {
       state.aiInput = action.payload;
     })
     .addCase(setGymnasiums, (state, action) => {
-      state.gymnasiums = action.payload;
+      state.gyms = action.payload;
+    })
+    .addCase(setLoading, (state, action) => {
+      state.loading = action.payload;
     });
 });
 
