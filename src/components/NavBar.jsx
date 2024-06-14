@@ -8,13 +8,13 @@ function NavBar() {
     <nav>
       <ul style={{ display: 'flex', justifyContent: 'space-around' }}>
         <li>
-          <Link to="/">Home</Link>
+          <Link to="/">홈</Link>
         </li>
         <li>
-          <Link to="/about">About</Link>
+          <Link to="/about">맛집찾기</Link>
         </li>
         <li>
-          <Link to="/SportsMap">SportsMap</Link>
+          <Link to="/SportsMap">체육관찾기</Link>
         </li>
       </ul>
     </nav>

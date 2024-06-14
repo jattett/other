@@ -5,6 +5,7 @@ import About from './page/About';
 import NotFound from './page/NotFound';
 import SportsMap from './page/SportsMap';
 import NavBar from './components/NavBar';
+import './global.css'; // Global styles
 
 function App() {
   return (

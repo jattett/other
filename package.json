@@ -51,11 +51,7 @@
     "ts-node": "^10.9.2"
   },
     "homepage": "https://jattett.github.io/other",
-<<<<<<< HEAD
       "scripts": {
-=======
-        "scripts": {
->>>>>>> ded0241aae5c194f8e81c86b325fa727a176a073
       "start": "react-scripts start",
       "build": "react-scripts build",
       "test": "react-scripts test",

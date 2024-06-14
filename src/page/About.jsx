@@ -1,23 +1,27 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
+import { Table, Input, Button, Rate } from 'antd';
+import { SearchOutlined } from '@ant-design/icons';
 import {
   setKeyword,
-  setMap,
   setPlaces,
   setMarkers,
   setPagination,
-  setRoadview,
   setCurrentPosition,
   setCurrentMarker,
   setAiInput,
 } from '../actions/actions';
+import './style.css';
 
 const About = () => {
   const dispatch = useDispatch();
-  const { keyword, map, places, markers, pagination, roadview, currentPosition, currentMarker, aiInput } = useSelector(
+  const { keyword, places, markers, pagination, currentPosition, currentMarker, aiInput } = useSelector(
     (state) => state.map
   );
+
+  const mapRef = useRef(null);
+  const roadviewRef = useRef(null);
 
   useEffect(() => {
     const { kakao } = window;
@@ -28,12 +32,12 @@ const About = () => {
     };
 
     const mapInstance = new kakao.maps.Map(container, options);
-    dispatch(setMap(mapInstance));
+    mapRef.current = mapInstance;
 
     const roadviewContainer = document.getElementById('roadview');
     const roadviewInstance = new kakao.maps.Roadview(roadviewContainer);
-    dispatch(setRoadview(roadviewInstance));
-  }, [dispatch]);
+    roadviewRef.current = roadviewInstance;
+  }, []);
 
   const activateCurrentLocation = () => {
     const { kakao } = window;
@@ -45,14 +49,14 @@ const About = () => {
 
         dispatch(setCurrentPosition(locPosition));
 
-        if (map) {
-          map.setCenter(locPosition);
+        if (mapRef.current) {
+          mapRef.current.setCenter(locPosition);
 
           if (currentMarker) {
             currentMarker.setPosition(locPosition);
           } else {
             const marker = new kakao.maps.Marker({
-              map: map,
+              map: mapRef.current,
               position: locPosition,
               title: '현재 위치',
             });
@@ -82,7 +86,9 @@ const About = () => {
       const sortedPlaces = data
         .map((place) => {
           const distance = calculateDistance(new kakao.maps.LatLng(place.y, place.x));
-          return { ...place, distance };
+          // Add a random rating for demonstration purposes
+          const rating = Math.random() * 5; // Replace this with actual rating data if available
+          return { ...place, distance, rating };
         })
         .sort((a, b) => a.distance - b.distance);
 
@@ -100,7 +106,7 @@ const About = () => {
       });
 
       dispatch(setMarkers(newMarkers));
-      map.setBounds(bounds);
+      mapRef.current.setBounds(bounds);
     } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
       alert('검색 결과가 존재하지 않습니다.');
     } else if (status === kakao.maps.services.Status.ERROR) {
@@ -115,16 +121,16 @@ const About = () => {
     });
 
     kakao.maps.event.addListener(marker, 'click', function () {
-      map.panTo(position);
+      mapRef.current.panTo(position);
       displayInfowindow(marker, title);
 
       const roadviewClient = new kakao.maps.RoadviewClient();
       roadviewClient.getNearestPanoId(position, 50, function (panoId) {
-        roadview.setPanoId(panoId, position);
+        roadviewRef.current.setPanoId(panoId, position);
       });
     });
 
-    marker.setMap(map);
+    marker.setMap(mapRef.current);
     return marker;
   };
 
@@ -133,7 +139,7 @@ const About = () => {
     const infowindow = new kakao.maps.InfoWindow({ zIndex: 1 });
     const content = `<div style="padding:5px;z-index:1;">${title}</div>`;
     infowindow.setContent(content);
-    infowindow.open(map, marker);
+    infowindow.open(mapRef.current, marker);
   };
 
   const handleListItemClick = (index) => {
@@ -142,13 +148,13 @@ const About = () => {
     if (place && marker) {
       const { kakao } = window;
       const position = new kakao.maps.LatLng(place.y, place.x);
-      map.setLevel(3);
-      map.panTo(position);
+      mapRef.current.setLevel(3);
+      mapRef.current.panTo(position);
       displayInfowindow(marker, place.place_name);
 
       const roadviewClient = new kakao.maps.RoadviewClient();
       roadviewClient.getNearestPanoId(position, 50, function (panoId) {
-        roadview.setPanoId(panoId, position);
+        roadviewRef.current.setPanoId(panoId, position);
       });
     }
   };
@@ -182,13 +188,22 @@ const About = () => {
   };
 
   const handleAiRecommendation = async () => {
-    const apiKey = 'process.env.REACT_APP_OPENAI_API_KEY'; // OpenAI API 키를 여기에 추가하세요
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY; // OpenAI API key should be here
     const prompt = `무슨말을 하든지 음식이름만 말해, 음식단어 만말하고 다른말은하지마`; // 프롬프트를 수정하여 항상 '맛집'을 반환하도록 함
 
+    if (!apiKey) {
+      alert('API key is missing');
+      return;
+    }
+
     try {
-      const response = await axios.post(
-        'https://api.openai.com/v1/completions',
-        {
+      const response = await fetch('https://api.openai.com/v1/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
           model: 'gpt-3.5-turbo',
           prompt,
           max_tokens: 50,
@@ -196,22 +211,61 @@ const About = () => {
           top_p: 1,
           frequency_penalty: 0.5,
           presence_penalty: 0.5,
-          stop: ['Human'],
-        },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${apiKey}`,
-          },
-        }
-      );
+          stop: ['Human']
+        })
+      });
 
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log(data); // Handle the response data
+
+      // Call searchPlaces or handle the data as needed
       searchPlaces();
     } catch (error) {
       console.error('API 호출 중 오류가 발생했습니다:', error);
       alert('AI 추천을 가져오는 중 오류가 발생했습니다.');
     }
   };
+
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'place_name',
+      key: 'name',
+    },
+    {
+      title: 'Road Address',
+      dataIndex: 'road_address_name',
+      key: 'roadAddress',
+    },
+    {
+      title: 'Address',
+      dataIndex: 'address_name',
+      key: 'address',
+    },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+    },
+    {
+      title: 'Distance (km)',
+      dataIndex: 'distance',
+      key: 'distance',
+      render: (distance) => formatDistanceToKm(distance),
+      sorter: (a, b) => a.distance - b.distance,
+    },
+    {
+      title: 'Rating',
+      dataIndex: 'rating',
+      key: 'rating',
+      render: (rating) => <Rate disabled defaultValue={rating} allowHalf />,
+      sorter: (a, b) => a.rating - b.rating,
+    },
+  ];
 
   return (
     <div className="map_wrap">
@@ -228,46 +282,50 @@ const About = () => {
               }}
             >
               키워드:{' '}
-              <input type="text" value={keyword} onChange={(e) => dispatch(setKeyword(e.target.value))} size="15" />
-              <button type="submit">검색하기</button>
+              <Input
+                value={keyword}
+                onChange={(e) => dispatch(setKeyword(e.target.value))}
+                size="15"
+                style={{ width: 200, marginRight: 10 }}
+              />
+              <Button type="primary" onClick={searchPlaces} icon={<SearchOutlined />}>
+                검색하기
+              </Button>
             </form>
-            <button onClick={activateCurrentLocation}>현재 위치</button>
+            <Button onClick={activateCurrentLocation} style={{ marginLeft: 10 }}>
+              현재 위치
+            </Button>
           </div>
           <div>
-            <textarea
+            <Input.TextArea
               value={aiInput}
               onChange={(e) => dispatch(setAiInput(e.target.value))}
               rows="4"
-              cols="50"
               placeholder="장소 추천을 위한 입력을 여기에 입력하세요."
+              style={{ width: '100%', marginTop: 10 }}
             />
-            <button onClick={handleAiRecommendation}>AI 추천</button>
+            <Button onClick={handleAiRecommendation} type="primary" style={{ marginTop: 10 }}>
+              AI 추천
+            </Button>
           </div>
         </div>
         <hr />
-        <ul id="placesList">
-          {places.map((place, index) => {
-            const distance = place.distance; // 정렬된 place에서 거리 가져오기
-            return (
-              <li key={index} onClick={() => handleListItemClick(index)}>
-                <span className={`markerbg marker_${index + 1}`}></span>
-                <div className="info">
-                  <h5>{place.place_name}</h5>
-                  {place.road_address_name ? (
-                    <>
-                      <span>{place.road_address_name}</span>
-                      <span className="jibun gray">{place.address_name}</span>
-                    </>
-                  ) : (
-                    <span>{place.address_name}</span>
-                  )}
-                  <span className="tel">{place.phone}</span>
-                  {distance !== null && <span className="distance">거리: {formatDistanceToKm(distance)}km</span>}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+        <Table
+          columns={columns}
+          dataSource={places}
+          rowKey={(record) => record.id}
+          pagination={{
+            current: pagination ? pagination.current : 1,
+            total: pagination ? pagination.totalCount : 0,
+            pageSize: 15,
+            onChange: (page) => pagination.gotoPage(page),
+          }}
+          onRow={(record, rowIndex) => {
+            return {
+              onClick: () => handleListItemClick(rowIndex),
+            };
+          }}
+        />
         <div id="pagination">{displayPagination()}</div>
       </div>
     </div>
