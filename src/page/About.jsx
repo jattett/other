@@ -198,7 +198,8 @@ const About = () => {
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY; // Gemini API key should be here
     const prompt = `다음 상황에 맞는 음식 하나를 추천해줘:
 - 키워드: 맛집
-- 조건: 오로지 음식 이름만 말하고 다른 말은 하지 마. 여러 가지 음식을 추천하지 말고 랜덤으로 한 가지 음식을 추천해. 반드시 한글로만 반환해.
+- 조건: 오로지 음식 이름만 말하고 다른 말은 하지 마. 여러 가지 음식을 추천하지 말고 랜덤으로 한 가지 음식을 추천해. 반드시 한글로만 반환해
+그리고 다양한 음식들을 추천해줘 외국음식도있고, 너무 한식만추천하는거같은데 다양하게부탁해
 - 예시: 김치찌개, 된장찌개, 비빔밥 등.`; 
     if (!apiKey) {
       alert('API key is missing');

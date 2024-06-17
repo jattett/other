@@ -39,12 +39,7 @@
         background-color: #074397;
     }
 }
-
-@media screen and (max-width:450px) {
     :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper .ant-table-cell, :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper .ant-table-thead>tr>th, :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper .ant-table-tbody>tr>th, :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper .ant-table-tbody>tr>td, :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper tfoot>tr>th, :where(.css-dev-only-do-not-override-3rel02).ant-table-wrapper tfoot>tr>td{
         padding: 5px 2px !important;
     }
-    
-    
-}
 
