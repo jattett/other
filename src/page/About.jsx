@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import axios from 'axios';
 import { Table, Input, Button, Rate } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import {
@@ -13,6 +12,7 @@ import {
   setAiInput,
 } from '../actions/actions';
 import './style.css';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const About = () => {
   const dispatch = useDispatch();
@@ -40,33 +40,40 @@ const About = () => {
   }, []);
 
   const activateCurrentLocation = () => {
-    const { kakao } = window;
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition((position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const locPosition = new kakao.maps.LatLng(lat, lon);
+    return new Promise((resolve, reject) => {
+      const { kakao } = window;
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition((position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          const locPosition = new kakao.maps.LatLng(lat, lon);
 
-        dispatch(setCurrentPosition(locPosition));
+          dispatch(setCurrentPosition(locPosition));
 
-        if (mapRef.current) {
-          mapRef.current.setCenter(locPosition);
+          if (mapRef.current) {
+            mapRef.current.setCenter(locPosition);
 
-          if (currentMarker) {
-            currentMarker.setPosition(locPosition);
-          } else {
-            const marker = new kakao.maps.Marker({
-              map: mapRef.current,
-              position: locPosition,
-              title: '현재 위치',
-            });
-            dispatch(setCurrentMarker(marker));
+            if (currentMarker) {
+              currentMarker.setPosition(locPosition);
+            } else {
+              const marker = new kakao.maps.Marker({
+                map: mapRef.current,
+                position: locPosition,
+                title: '현재 위치',
+              });
+              dispatch(setCurrentMarker(marker));
+            }
           }
-        }
-      });
-    } else {
-      alert('현재 위치를 확인할 수 없습니다.');
-    }
+          resolve(locPosition);
+        }, () => {
+          alert('현재 위치를 확인할 수 없습니다.');
+          reject(new Error('Geolocation error'));
+        });
+      } else {
+        alert('현재 위치를 확인할 수 없습니다.');
+        reject(new Error('Geolocation not supported'));
+      }
+    });
   };
 
   const searchPlaces = () => {
@@ -188,42 +195,47 @@ const About = () => {
   };
 
   const handleAiRecommendation = async () => {
-    const apiKey = process.env.REACT_APP_OPENAI_API_KEY; // OpenAI API key should be here
-    const prompt = `무슨말을 하든지 음식이름만 말해, 음식단어 만말하고 다른말은하지마`; // 프롬프트를 수정하여 항상 '맛집'을 반환하도록 함
-
+    const apiKey = process.env.REACT_APP_GEMINI_API_KEY; // Gemini API key should be here
+    const prompt = `다음 상황에 맞는 음식 하나를 추천해줘:
+- 키워드: 맛집
+- 조건: 오로지 음식 이름만 말하고 다른 말은 하지 마. 여러 가지 음식을 추천하지 말고 랜덤으로 한 가지 음식을 추천해. 반드시 한글로만 반환해.
+- 예시: 김치찌개, 된장찌개, 비빔밥 등.`; 
     if (!apiKey) {
       alert('API key is missing');
       return;
     }
 
     try {
-      const response = await fetch('https://api.openai.com/v1/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'gpt-3.5-turbo',
-          prompt,
-          max_tokens: 50,
-          temperature: 0.8,
-          top_p: 1,
-          frequency_penalty: 0.5,
-          presence_penalty: 0.5,
-          stop: ['Human']
-        })
+      const genAI = new GoogleGenerativeAI(apiKey);
+
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-1.5-flash',
       });
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
+      const generationConfig = {
+        temperature: 1,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 8192,
+        responseMimeType: 'text/plain',
+      };
 
-      const data = await response.json();
-      console.log(data); // Handle the response data
+      const chatSession = model.startChat({
+        generationConfig,
+        history: [],
+      });
 
-      // Call searchPlaces or handle the data as needed
-      searchPlaces();
+      const result = await chatSession.sendMessage(prompt);
+      const recommendedPlace = result.response.text().trim();
+      console.log(recommendedPlace);
+
+      // Set the recommended place as the keyword
+      dispatch(setKeyword(recommendedPlace));
+      
+      // Activate current location and then search places
+      await activateCurrentLocation();
+      
+      // Trigger search with the new keyword
     } catch (error) {
       console.error('API 호출 중 오류가 발생했습니다:', error);
       alert('AI 추천을 가져오는 중 오류가 발생했습니다.');
