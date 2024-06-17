@@ -13,7 +13,7 @@ const contentStyle = {
 
 
 
-const Home = () => {
+const other = () => {
   const [touchControl, setTouchControl] = useState(0);
   const carouselRef = useRef();
 
@@ -34,6 +34,7 @@ const Home = () => {
 
   return (
     <div onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
+      <h2>나편하라고 만든거임</h2>
     <Carousel ref={carouselRef} arrows dotPosition="left" infinite={true}>
       <div>
         <h3 style={contentStyle}>터치 커스텀 실험용임</h3>
@@ -52,4 +53,4 @@ const Home = () => {
   );
 };
 
-export default Home;
+export default other;
