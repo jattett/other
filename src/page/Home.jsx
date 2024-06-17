@@ -13,7 +13,7 @@ const contentStyle = {
 
 
 
-const other = () => {
+const Other = () => {
   const [touchControl, setTouchControl] = useState(0);
   const carouselRef = useRef();
 
@@ -53,4 +53,4 @@ const other = () => {
   );
 };
 
-export default other;
+export default Other;
