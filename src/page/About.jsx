@@ -24,6 +24,13 @@ const About = () => {
   const roadviewRef = useRef(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
+  const [tableParams, setTableParams] = useState({
+    pagination: {
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    },
+  });
 
   useEffect(() => {
     const { kakao } = window;
@@ -116,6 +123,16 @@ const About = () => {
 
       dispatch(setMarkers(newMarkers));
       mapRef.current.setBounds(bounds);
+
+      // Update table parameters with the pagination information
+      setTableParams({
+        ...tableParams,
+        pagination: {
+          ...tableParams.pagination,
+          total: pagination.totalCount,
+        },
+      });
+
     } else if (status === kakao.maps.services.Status.ZERO_RESULT) {
       alert('검색 결과가 존재하지 않습니다.');
     } else if (status === kakao.maps.services.Status.ERROR) {
@@ -319,13 +336,6 @@ const About = () => {
             </Button>
           </div>
           <div>
-            {/* <Input.TextArea
-              value={aiInput}
-              onChange={(e) => dispatch(setAiInput(e.target.value))}
-              rows="4"
-              placeholder="장소 추천을 위한 입력을 여기에 입력하세요."
-              style={{ width: '100%', marginTop: 10 }}
-            /> */}
             <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginTop: 10 }}>
               AI 추천
             </Button>
@@ -337,10 +347,22 @@ const About = () => {
           dataSource={places}
           rowKey={(record) => record.id}
           pagination={{
-            current: pagination ? pagination.current : 1,
-            total: pagination ? pagination.totalCount : 0,
-            pageSize: 15,
-            onChange: (page) => pagination.gotoPage(page),
+            current: tableParams.pagination.current,
+            total: tableParams.pagination.total,
+            pageSize: tableParams.pagination.pageSize,
+            pageSizeOptions: [10, 50, 100],
+            showSizeChanger: true,
+            onChange: (page, pageSize) => {
+              pagination.gotoPage(page);
+              setTableParams({
+                ...tableParams,
+                pagination: {
+                  ...tableParams.pagination,
+                  current: page,
+                  pageSize: pageSize,
+                },
+              });
+            },
           }}
           onRow={(record, rowIndex) => {
             return {
