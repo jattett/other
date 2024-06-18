@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { Table, Input, Button, Rate } from 'antd';
+import { Table, Input, Button, Rate, Modal, Form } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import {
   setKeyword,
@@ -22,6 +22,8 @@ const About = () => {
 
   const mapRef = useRef(null);
   const roadviewRef = useRef(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
 
   useEffect(() => {
     const { kakao } = window;
@@ -196,19 +198,27 @@ const About = () => {
 
   const handleAiRecommendation = async () => {
     const apiKey = process.env.REACT_APP_GEMINI_API_KEY; // Gemini API key should be here
-    const prompt = `다음 상황에 맞는 음식 하나를 추천해줘:
-- 키워드: 맛집
-- 조건: 오로지 음식 이름만 말하고 다른 말은 하지 마. 여러 가지 음식을 추천하지 말고 랜덤으로 한 가지 음식을 추천해. 반드시 한글로만 반환해
-그리고 다양한 음식들을 추천해줘 외국음식도있고, 너무 한식만추천하는거같은데 다양하게부탁해
-- 예시: 김치찌개, 된장찌개, 비빔밥 등.`; 
     if (!apiKey) {
       alert('API key is missing');
       return;
     }
 
-    try {
-      const genAI = new GoogleGenerativeAI(apiKey);
+    setIsModalVisible(true);
 
+    try {
+      const values = await form.validateFields();
+      const prompt = `
+        선호하는 음식 종류: ${values.foodType}
+        알레르기 정보: ${values.allergies}
+        특별한 식단: ${values.specialDiet}
+        음식 취향: ${values.taste}
+        식사 시간: ${values.mealTime}
+        현재 위치: ${values.location}
+        특별한 요구사항: ${values.specialRequests}
+       AI가 음식이름만 답변하게해주세요.
+      `;
+
+      const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: 'gemini-1.5-flash',
       });
@@ -233,13 +243,12 @@ const About = () => {
       // Set the recommended place as the keyword
       dispatch(setKeyword(recommendedPlace));
       
-      // Activate current location and then search places
-      await activateCurrentLocation();
-      
-      // Trigger search with the new keyword
+
     } catch (error) {
       console.error('API 호출 중 오류가 발생했습니다:', error);
       alert('AI 추천을 가져오는 중 오류가 발생했습니다.');
+    } finally {
+      setIsModalVisible(false);
     }
   };
 
@@ -310,14 +319,14 @@ const About = () => {
             </Button>
           </div>
           <div>
-            <Input.TextArea
+            {/* <Input.TextArea
               value={aiInput}
               onChange={(e) => dispatch(setAiInput(e.target.value))}
               rows="4"
               placeholder="장소 추천을 위한 입력을 여기에 입력하세요."
               style={{ width: '100%', marginTop: 10 }}
-            />
-            <Button onClick={handleAiRecommendation} type="primary" style={{ marginTop: 10 }}>
+            /> */}
+            <Button onClick={() => setIsModalVisible(true)} type="primary" style={{ marginTop: 10 }}>
               AI 추천
             </Button>
           </div>
@@ -339,8 +348,43 @@ const About = () => {
             };
           }}
         />
-        <div id="pagination">{displayPagination()}</div>
       </div>
+
+      <Modal
+        title="AI 추천 입력"
+        visible={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={[
+          <Button key="back" onClick={() => setIsModalVisible(false)}>
+            취소
+          </Button>,
+          <Button key="submit" type="primary" onClick={form.submit}>
+            확인
+          </Button>,
+        ]}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleAiRecommendation}
+        >
+          <Form.Item name="foodType" label="선호하는 음식 종류" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="예: 한식, 중식, 일식, 양식 등" />
+          </Form.Item>
+          <Form.Item name="allergies" label="알레르기 정보" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="예: 땅콩, 해산물 등" />
+          </Form.Item>
+          <Form.Item name="specialDiet" label="특별한 식단" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="예: 채식, 비건, 무글루텐 등" />
+          </Form.Item>
+          <Form.Item name="taste" label="음식 취향" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="예: 매운 음식, 달콤한 음식, 짠 음식 등" />
+          </Form.Item>
+          <Form.Item name="mealTime" label="식사 시간" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="예: 아침, 점심, 저녁, 간식 등" />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 };
